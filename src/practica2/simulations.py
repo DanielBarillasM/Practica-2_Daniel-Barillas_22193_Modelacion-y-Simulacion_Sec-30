@@ -41,7 +41,12 @@ Z_95 = 1.959963984540054
 
 
 def _validate_sample_size(size: int, *, minimum: int = 10, maximum: int = 1_000_000) -> int:
-    """Valida tamaños antes de reservar arreglos potencialmente grandes."""
+    """Valida tamaños antes de reservar arreglos potencialmente grandes.
+
+    La conversión explícita a entero normaliza valores provenientes de widgets
+    numéricos de Streamlit. Los límites evitan muestras vacías y protegen la
+    aplicación contra reservas accidentales de memoria excesiva.
+    """
 
     clean_size = int(size)
     if not minimum <= clean_size <= maximum:
@@ -52,11 +57,19 @@ def _validate_sample_size(size: int, *, minimum: int = 10, maximum: int = 1_000_
 
 
 def _estimate_summary(values: np.ndarray) -> EstimateSummary:
-    """Calcula media, error estándar e intervalo normal aproximado del 95 %."""
+    """Calcula media, error estándar e intervalo normal aproximado del 95 %.
+
+    El intervalo es ``media ± z*SE`` con el cuantil normal 0.975. Se utiliza
+    ``ddof=1`` para estimar la desviación estándar a partir de la muestra; el
+    caso de una sola observación se trata aparte para evitar una división sin
+    grados de libertad.
+    """
 
     data = np.asarray(values, dtype=float)
     if data.size == 0:
         raise SimulationError("No se puede resumir una muestra vacía.")
+    # Esta función también resume indicadores 0/1; en ese caso la media es una
+    # probabilidad Monte Carlo, como ocurre con las reclamaciones del Ejercicio 4.
     estimate = float(np.mean(data))
     standard_error = (
         0.0 if data.size == 1 else float(np.std(data, ddof=1) / math.sqrt(data.size))
@@ -95,13 +108,19 @@ def simulate_truncated_exponential(
     a diferencia de generar exponenciales hasta encontrar una menor que 0.05.
     """
 
+    # El PDF fija n=1,000 desde la interfaz, pero la función admite otros tamaños
+    # para facilitar pruebas estadísticas sin duplicar el algoritmo.
     n = _validate_sample_size(sample_size, minimum=1)
     exact = truncated_exponential_exact_mean(upper)
     rng = np.random.default_rng(int(seed))
     uniforms = rng.random(n)
+    # ``expm1`` y ``log1p`` evitan pérdida de precisión: a=0.05 hace que las
+    # diferencias 1-exp(-a) y 1-U*c sean pequeñas.
     normalization = -math.expm1(-upper)  # 1-exp(-upper), calculado con estabilidad.
     generated = -np.log1p(-uniforms * normalization)
     contributions = generated
+    # La trayectoria acumulada no interviene en la estimación final; se conserva
+    # como evidencia visual de la ley de los grandes números.
     cumulative = np.cumsum(contributions) / np.arange(1, n + 1)
     samples = pd.DataFrame(
         {
@@ -120,6 +139,13 @@ def simulate_truncated_exponential(
 
 
 def _validate_weights(weights: Sequence[float]) -> np.ndarray:
+    """Normaliza y valida las probabilidades de selección de una mezcla.
+
+    No se renormalizan pesos incorrectos de forma silenciosa. Exigir que sumen
+    uno hace visible un error de entrada y conserva exactamente el algoritmo de
+    composición planteado en el Ejercicio 2.
+    """
+
     clean = np.asarray(weights, dtype=float)
     if clean.ndim != 1 or clean.size == 0:
         raise SimulationError("Debe existir al menos un peso de composición.")
@@ -153,6 +179,8 @@ def simulate_composition(
 
     n = _validate_sample_size(sample_size)
     clean_case = case.lower().strip()
+    # Cada caso solo cambia las distribuciones componentes. La selección del
+    # índice y el segundo uniforme siguen la misma construcción del Ejercicio 2.
     if clean_case == "a":
         clean_weights = np.array([1 / 3, 1 / 3, 1 / 3], dtype=float)
         powers = np.array([1, 3, 5], dtype=int)
@@ -166,15 +194,21 @@ def simulate_composition(
         raise SimulationError("El caso de composición debe ser general, a, b o c.")
 
     rng = np.random.default_rng(int(seed))
+    # Un primer uniforme selecciona el componente mediante la CDF discreta de
+    # los pesos. ``searchsorted`` implementa transformación inversa discreta.
     u_component = rng.random(n)
     component_index = np.searchsorted(
         np.cumsum(clean_weights), u_component, side="right"
     )
     component_index = np.minimum(component_index, len(clean_weights) - 1)
+    # El segundo uniforme debe ser independiente del usado para elegir I; así la
+    # distribución condicional dentro de cada componente permanece correcta.
     u_value = rng.random(n)
 
     if clean_case == "b":
         exponential_component = component_index == 0
+        # En 3(b), I=1 genera Exp(2) y I=2 genera Uniforme(0,1). Sus pesos 1/3 y
+        # 2/3 reproducen exactamente ambas ramas de la CDF por tramos.
         generated = np.where(
             exponential_component,
             -np.log1p(-u_value) / 2.0,
@@ -187,6 +221,7 @@ def simulate_composition(
         )
     else:
         assert powers is not None
+        # Si F_i(x)=x^i en [0,1], su inversa es F_i^{-1}(u)=u^(1/i).
         selected_power = powers[component_index]
         generated = np.power(u_value, 1.0 / selected_power)
         component_names = np.array([f"F(x)=x^{power}" for power in selected_power])
@@ -202,8 +237,12 @@ def simulate_composition(
         }
     )
 
+    # La exponencial del inciso (b) no tiene soporte acotado. El percentil 99.5
+    # mantiene legible la gráfica sin alterar ninguna muestra ni estadístico.
     max_x = max(1.0, float(np.quantile(generated, 0.995))) if clean_case == "b" else 1.0
     grid = np.linspace(0.0, max_x, 240)
+    # La CDF empírica se evalúa contando observaciones <= x en una muestra
+    # ordenada. Esta comparación sirve como comprobación, no como generador.
     empirical = np.searchsorted(np.sort(generated), grid, side="right") / n
     if clean_case == "b":
         theoretical = np.where(
@@ -245,7 +284,11 @@ def exact_aggregate_claim_probability(
         raise SimulationError("Los parámetros de la cartera no son válidos.")
     if claim_mean <= 0 or threshold < 0:
         raise SimulationError("La media y el umbral deben ser válidos.")
+    # N=0 no contribuye a la cola cuando el umbral es positivo, de modo que la
+    # suma puede iniciar en una reclamación sin término especial.
     counts = np.arange(1, insured + 1)
+    # La independencia permite condicionar por N. El producto de la PMF
+    # binomial y la supervivencia Gamma integra todas las cantidades posibles.
     probabilities = binom.pmf(counts, insured, claim_probability)
     tails = gamma.sf(threshold, a=counts, scale=claim_mean)
     return float(np.dot(probabilities, tails))
@@ -274,9 +317,13 @@ def simulate_insurance_claims(
     if claim_mean <= 0 or threshold <= 0:
         raise SimulationError("La media y el umbral deben ser positivos.")
 
+    # Se derivan flujos independientes: uno produce los agregados y otro detalla
+    # la primera réplica. Esto evita que mostrar el detalle cambie las restantes.
     seed_sequence = np.random.SeedSequence(int(seed))
     aggregate_seed, detail_seed = seed_sequence.spawn(2)
     rng = np.random.default_rng(aggregate_seed)
+    # Cada fila representa un mes completo. La binomial resume los 1,000
+    # indicadores Bernoulli de reclamación sin generar una matriz enorme.
     claim_counts = rng.binomial(insured, claim_probability, size=n)
     totals = np.zeros(n, dtype=float)
     # La primera réplica se desglosa reclamación por reclamación. Las restantes
@@ -285,10 +332,14 @@ def simulate_insurance_claims(
     first_count = int(claim_counts[0])
     individual = detail_rng.exponential(claim_mean, size=first_count)
     totals[0] = float(individual.sum())
+    # Para n>0, la suma de n exponenciales de igual escala es Gamma(n, escala).
+    # Solo se llama al generador Gamma en meses con al menos una reclamación.
     positive_indices = np.flatnonzero(claim_counts[1:] > 0) + 1
     totals[positive_indices] = rng.gamma(
         shape=claim_counts[positive_indices], scale=claim_mean
     )
+    # El indicador 0/1 convierte directamente su media en la probabilidad
+    # estimada de exceder el umbral.
     exceeded = totals > threshold
     running = np.cumsum(exceeded) / np.arange(1, n + 1)
     months = pd.DataFrame(
@@ -348,6 +399,8 @@ def generate_normal_exponential_rejection(
     exponentials_generated = 0
     squares_computed = 0
     recycled_y1: float | None = None
+    # ``recycled_y1`` lleva entre iteraciones la exponencial residual demostrada
+    # independiente en el Ejemplo 5f. Solo la primera normal empieza sin ella.
     while len(accepted_rows) < n:
         if recycled_y1 is None:
             y1 = float(rng.exponential())
@@ -358,10 +411,14 @@ def generate_normal_exponential_rejection(
             recycled_y1 = None
             y1_origin = "Residual reciclada"
 
+        # Una normal puede necesitar varios intentos. Cada intento evalúa una
+        # sola condición cuadrática y siempre genera una nueva Y2.
         while True:
             attempt += 1
             y2 = float(rng.exponential())
             exponentials_generated += 1
+            # Esta desigualdad evita calcular explícitamente la exponencial de
+            # la probabilidad de aceptación del rechazo clásico.
             threshold = 0.5 * (y1 - 1.0) ** 2
             squares_computed += 1
             accepted = y2 > threshold
@@ -382,6 +439,8 @@ def generate_normal_exponential_rejection(
                 # independiente de Z. Se convierte en la Y1 de la próxima
                 # normal, evitando generar una exponencial adicional.
                 recycled_y1 = residual
+                # La densidad normal es simétrica. Una Bernoulli(1/2) aplicada
+                # al valor absoluto aceptado recupera la normal estándar.
                 u_sign = float(rng.random())
                 z = y1 if u_sign <= 0.5 else -y1
                 accepted_rows.append(
@@ -424,6 +483,7 @@ def polar_transform(u1: float, u2: float) -> tuple[float, float, float, float, f
 
     if not (0 < u1 < 1 and 0 < u2 < 1):
         raise SimulationError("U1 y U2 deben pertenecer al intervalo (0,1).")
+    # El traslado U -> 2U-1 produce un punto uniforme en el cuadrado (-1,1)^2.
     v1 = 2 * float(u1) - 1
     v2 = 2 * float(u2) - 1
     s = v1 * v1 + v2 * v2
@@ -431,12 +491,20 @@ def polar_transform(u1: float, u2: float) -> tuple[float, float, float, float, f
         raise SimulationError(
             f"El par se rechaza porque S={s:.6f} no pertenece a (0,1)."
         )
+    # Condicionado a caer dentro del disco, el factor radial transforma el par
+    # uniforme en dos normales estándar independientes sin seno ni coseno.
     factor = math.sqrt(-2 * math.log(s) / s)
     return v1, v2, s, v1 * factor, v2 * factor
 
 
 def generate_normal_polar(seed: int, sample_size: int = 10_000) -> PolarNormalResult:
-    """Genera normales estándar en pares con el método polar de Marsaglia."""
+    """Genera normales estándar en pares con el método polar de Marsaglia.
+
+    Cada propuesta consume dos uniformes. Si ``S`` no pertenece a ``(0,1)`` se
+    rechaza el par completo; una propuesta aceptada produce dos observaciones.
+    Si el tamaño solicitado es impar, el segundo valor del último par se omite
+    únicamente de ``values`` pero permanece documentado en la tabla de pares.
+    """
 
     n = _validate_sample_size(sample_size, minimum=100, maximum=200_000)
     rng = np.random.default_rng(int(seed))
@@ -450,6 +518,7 @@ def generate_normal_polar(seed: int, sample_size: int = 10_000) -> PolarNormalRe
         v1 = 2 * float(u1) - 1
         v2 = 2 * float(u2) - 1
         s = v1 * v1 + v2 * v2
+        # S=0 haría indefinido ln(S)/S y S>=1 corresponde a la región de rechazo.
         accepted = 0 < s < 1
         attempts.append(
             {
@@ -507,6 +576,8 @@ def simulate_homogeneous_poisson(
         raise SimulationError("La tasa lambda debe ser positiva.")
     if not math.isfinite(horizon) or horizon <= 0:
         raise SimulationError("El horizonte T debe ser positivo.")
+    # Los incrementos exponenciales son independientes y estacionarios; sumar
+    # sus realizaciones construye los tiempos de llegada del proceso.
     rng = np.random.default_rng(int(seed))
     time = 0.0
     rows: list[dict[str, float | int | str]] = []
@@ -515,6 +586,8 @@ def simulate_homogeneous_poisson(
     while True:
         draw += 1
         u = float(rng.random())
+        # Inversa de F_E(t)=1-exp(-lambda*t). ``log1p`` mantiene precisión cerca
+        # de U=0 y expresa en la tabla el uniforme que originó cada salto.
         interarrival = -math.log1p(-u) / rate
         candidate = time + interarrival
         inside = candidate <= horizon
@@ -527,12 +600,16 @@ def simulate_homogeneous_poisson(
                 "Resultado": "Evento dentro de [0,T]" if inside else "Supera T; detener",
             }
         )
+        # El primer candidato fuera de [0,T] certifica que ya no existen eventos
+        # por generar en el horizonte y también se conserva para auditoría.
         if not inside:
             break
         time = candidate
         event_times.append(time)
 
     events = pd.DataFrame(rows)
+    # Repetir el conteo final en T permite que Plotly cierre correctamente el
+    # último tramo horizontal de la trayectoria escalonada.
     path_times = [0.0, *event_times, horizon]
     path_counts = [0, *range(1, len(event_times) + 1), len(event_times)]
     path = pd.DataFrame({"Tiempo": path_times, "N(t)": path_counts})
@@ -552,12 +629,22 @@ def simulate_homogeneous_poisson(
 
 
 def nhpp_intensity(time: float | np.ndarray) -> float | np.ndarray:
-    """Intensidad del enunciado: lambda(t)=3+4/(t+1)."""
+    """Intensidad del enunciado: ``lambda(t)=3+4/(t+1)``.
+
+    Acepta escalares o arreglos para reutilizar la misma definición tanto en el
+    simulador como en la curva mostrada por la interfaz.
+    """
 
     return 3.0 + 4.0 / (np.asarray(time) + 1.0)
 
 
 def _nhpp_global(horizon: float, rng: np.random.Generator) -> NHPPMethodResult:
+    """Aplica thinning con la cota constante ``M=lambda(0)=7``.
+
+    Los candidatos forman un Poisson homogéneo de tasa 7. Aceptar cada candidato
+    con probabilidad ``lambda(t)/7`` deja exactamente la intensidad deseada.
+    """
+
     bound = 7.0
     time = 0.0
     rows: list[dict[str, float | int | str]] = []
@@ -573,6 +660,8 @@ def _nhpp_global(horizon: float, rng: np.random.Generator) -> NHPPMethodResult:
         intensity = float(nhpp_intensity(time))
         probability = intensity / bound
         u_accept = float(rng.random())
+        # El uniforme de aceptación adelgaza el proceso dominante sin mover el
+        # reloj: incluso una propuesta rechazada pasa a ser el nuevo tiempo base.
         accepted = u_accept <= probability
         if accepted:
             accepted_times.append(time)
@@ -603,7 +692,12 @@ def _nhpp_global(horizon: float, rng: np.random.Generator) -> NHPPMethodResult:
 
 
 def _nhpp_piecewise(horizon: float, rng: np.random.Generator) -> NHPPMethodResult:
-    """Adelgazamiento mejorado con una cota decreciente por cada intervalo."""
+    """Adelgazamiento mejorado con una cota decreciente por cada intervalo.
+
+    Como la intensidad es monótona decreciente, su valor en el extremo izquierdo
+    de ``[k,k+1)`` domina todo ese intervalo. Reiniciar el proceso dominante al
+    cambiar de intervalo es válido por la independencia de incrementos Poisson.
+    """
 
     rows: list[dict[str, float | int | str]] = []
     accepted_times: list[float] = []
@@ -611,11 +705,15 @@ def _nhpp_piecewise(horizon: float, rng: np.random.Generator) -> NHPPMethodResul
     interval_start = 0.0
     while interval_start < horizon:
         interval_end = min(math.floor(interval_start) + 1.0, horizon)
+        # Esta cota local queda mucho más cerca de lambda(t) que la cota global,
+        # especialmente al final del horizonte; por eso reduce los rechazos.
         bound = float(nhpp_intensity(interval_start))
         time = interval_start
         while True:
             u_gap = float(rng.random())
             candidate = time - math.log1p(-u_gap) / bound
+            # Una propuesta que cruza el límite no pertenece al proceso
+            # dominante de este intervalo; se cambia de cota y se reinicia allí.
             if candidate >= interval_end:
                 break
             time = candidate
@@ -656,7 +754,12 @@ def _nhpp_piecewise(horizon: float, rng: np.random.Generator) -> NHPPMethodResul
 
 
 def simulate_nhpp_comparison(seed: int, horizon: float = 10.0) -> NHPPComparisonResult:
-    """Compara el adelgazamiento global con la mejora pedida en el inciso (b)."""
+    """Compara el adelgazamiento global con la mejora pedida en el inciso (b).
+
+    ``SeedSequence.spawn`` produce dos flujos reproducibles pero independientes.
+    Así una estrategia no consume los uniformes de la otra y ambas pueden
+    ejecutarse o inspeccionarse por separado.
+    """
 
     if not math.isfinite(horizon) or horizon <= 0:
         raise SimulationError("El horizonte debe ser positivo.")
@@ -664,6 +767,8 @@ def simulate_nhpp_comparison(seed: int, horizon: float = 10.0) -> NHPPComparison
     global_seed, improved_seed = seed_sequence.spawn(2)
     global_result = _nhpp_global(horizon, np.random.default_rng(global_seed))
     improved_result = _nhpp_piecewise(horizon, np.random.default_rng(improved_seed))
+    # Integral analítica de 3+4/(t+1) entre 0 y T. Es una referencia de media,
+    # no el número de eventos que cada trayectoria individual debe alcanzar.
     expected = 3 * horizon + 4 * math.log(horizon + 1)
     return NHPPComparisonResult(global_result, improved_result, expected, horizon)
 
@@ -674,7 +779,12 @@ def simulate_nhpp_comparison(seed: int, horizon: float = 10.0) -> NHPPComparison
 
 
 def _poisson_inverse(mean: float, uniform: float) -> int:
-    """Genera Poisson por inversión y conserva el uniforme para la auditoría."""
+    """Genera Poisson por inversión y conserva el uniforme para la auditoría.
+
+    La función cuantil estable de SciPy evita sumar muchas probabilidades cuando
+    ``lambda*pi*R^2`` es grande. La validación mantiene la misma convención
+    semiabierta ``[0,1)`` que utiliza ``Generator.random``.
+    """
 
     if not 0 <= uniform < 1:
         raise SimulationError("El uniforme para invertir Poisson debe pertenecer a [0,1).")
@@ -707,16 +817,24 @@ def simulate_spatial_poisson(
         raise SimulationError("La intensidad espacial debe ser positiva.")
     if not math.isfinite(radius) or radius <= 0:
         raise SimulationError("El radio debe ser positivo.")
+    # Una región de área A contiene Poisson(lambda*A) puntos. En un disco,
+    # A=pi*R^2 determina primero el conteo total.
     mean = rate * math.pi * radius**2
     if mean > 5_000:
         raise SimulationError("El número esperado de puntos no puede exceder 5,000.")
     rng = np.random.default_rng(int(seed))
+    # Se usa inversión en lugar de ``rng.poisson`` para poder mostrar también el
+    # uniforme responsable del conteo en el ejemplo numérico del Ejercicio 10.
     u_count = float(rng.random())
     count = _poisson_inverse(mean, u_count)
     u_radius = rng.random(count)
     u_angle = rng.random(count)
+    # P(r<=x)=x^2/R^2 para un punto uniforme por área. Invertir esa CDF explica
+    # la raíz cuadrada; usar R*U concentraría puntos incorrectamente en el centro.
     radial = radius * np.sqrt(u_radius)
     angle = 2 * math.pi * u_angle
+    # Las coordenadas cartesianas se calculan solo para visualizar. La tabla
+    # conserva además (r,theta), como solicita el ejemplo teórico del PDF.
     x = radial * np.cos(angle)
     y = radial * np.sin(angle)
     points = pd.DataFrame(

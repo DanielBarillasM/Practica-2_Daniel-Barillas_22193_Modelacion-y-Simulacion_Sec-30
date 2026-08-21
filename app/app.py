@@ -124,6 +124,13 @@ def format_number(value: float, digits: int = 6) -> str:
 
 
 def section_intro(title: str, description: str) -> None:
+    """Dibuja el encabezado común con el que comienza cada ejercicio.
+
+    La función mantiene separada la presentación repetitiva del contenido
+    particular de cada problema. ``description`` se inserta dentro de una
+    tarjeta cuyo aspecto se define en ``assets/styles.css``.
+    """
+
     st.header(title)
     st.markdown(
         f'<div class="section-intro"><p>{description}</p></div>',
@@ -139,10 +146,23 @@ def exercise_statement(text: str) -> None:
 
 
 def theory_card(text: str) -> None:
+    """Muestra una observación teórica destacada mediante HTML estilizado.
+
+    El argumento puede contener etiquetas HTML sencillas porque varias notas
+    necesitan resaltar una idea clave sin fragmentarla en varios componentes.
+    """
+
     st.markdown(f'<div class="theory-card">{text}</div>', unsafe_allow_html=True)
 
 
 def download_table(data: pd.DataFrame, filename: str, key: str) -> None:
+    """Añade la descarga CSV de una tabla conservando caracteres en español.
+
+    ``utf-8-sig`` incluye una marca de orden de bytes que facilita que Excel
+    reconozca UTF-8. La clave distingue botones que conviven en distintas
+    pestañas de Streamlit.
+    """
+
     st.download_button(
         "Descargar tabla completa en CSV",
         data=data.to_csv(index=False).encode("utf-8-sig"),
@@ -153,6 +173,13 @@ def download_table(data: pd.DataFrame, filename: str, key: str) -> None:
 
 
 def normal_histogram(values: np.ndarray, title: str) -> go.Figure:
+    """Construye un histograma normalizado y superpone la densidad N(0,1).
+
+    La curva de referencia permite evaluar visualmente si los generadores de
+    los ejercicios 5 y 9 reproducen la forma teórica, además de las métricas
+    numéricas que aparecen en cada página.
+    """
+
     figure = px.histogram(
         x=values,
         histnorm="probability density",
@@ -169,6 +196,13 @@ def normal_histogram(values: np.ndarray, title: str) -> go.Figure:
 
 
 def spatial_figure(result: SpatialPoissonResult, title: str) -> go.Figure:
+    """Representa un proceso espacial junto con la frontera de su dominio.
+
+    Se fija una relación de aspecto uno a uno para que el círculo no aparezca
+    deformado; así también se puede comprobar visualmente que ningún punto
+    generado queda fuera del radio solicitado.
+    """
+
     angle = np.linspace(0, 2 * math.pi, 500)
     figure = go.Figure()
     figure.add_trace(
@@ -201,6 +235,13 @@ def spatial_figure(result: SpatialPoissonResult, title: str) -> go.Figure:
 
 
 def exercise_1_page() -> None:
+    """Presenta y ejecuta la exponencial condicionada del ejercicio 1.
+
+    La página fija las 1,000 observaciones exigidas, guarda el resultado en el
+    estado de sesión y contrasta la media Monte Carlo con su valor exacto. Las
+    pestañas separan distribución, convergencia y trazabilidad de las muestras.
+    """
+
     section_intro(
         "Ejercicio 1 · Exponencial condicionada",
         "Generación eficiente de 1,000 valores de una exponencial de media 1 condicionada a X < 0.05.",
@@ -274,6 +315,13 @@ def exercise_1_page() -> None:
 
 
 def _parse_weights(text: str) -> list[float]:
+    """Convierte pesos escritos con comas, punto y coma o espacios a flotantes.
+
+    Los errores de entrada se traducen a ``SimulationError`` para que la capa
+    de interfaz muestre mensajes consistentes con las validaciones matemáticas.
+    La suma y no negatividad se verifican posteriormente en el simulador.
+    """
+
     try:
         values = [float(piece) for piece in re.split(r"[,;\s]+", text.strip()) if piece]
     except ValueError as exc:
@@ -284,6 +332,13 @@ def _parse_weights(text: str) -> list[float]:
 
 
 def exercise_2_page() -> None:
+    """Explica y demuestra interactivamente el método de composición.
+
+    El usuario define las probabilidades de mezcla y observa tanto la selección
+    empírica de componentes como la concordancia entre la CDF obtenida y la CDF
+    teórica derivada mediante la ley de probabilidad total.
+    """
+
     section_intro(
         "Ejercicio 2 · Método de composición",
         "Respuesta teórica y demostración programada para generar una distribución que es mezcla de varias CDF.",
@@ -359,6 +414,13 @@ def exercise_2_page() -> None:
 
 
 def exercise_3_page() -> None:
+    """Resuelve los tres incisos de composición incluidos en el ejercicio 3.
+
+    El control de inciso adapta teoría, parámetros y simulación. El resultado
+    se asocia también al inciso activo en ``session_state`` para impedir que una
+    tabla calculada para un caso se muestre accidentalmente bajo otro.
+    """
+
     section_intro(
         "Ejercicio 3 · Distribuciones por composición",
         "Algoritmos para los tres incisos obtenidos directamente a partir del método del ejercicio 2.",
@@ -435,6 +497,13 @@ def exercise_3_page() -> None:
 
 
 def exercise_4_page() -> None:
+    """Simula la cartera de seguros y compara con la referencia exacta.
+
+    Cada réplica representa un mes completo. La página comunica la estimación,
+    su incertidumbre y la probabilidad obtenida al condicionar por el número de
+    reclamaciones; además conserva una tabla auditable de los meses simulados.
+    """
+
     section_intro(
         "Ejercicio 4 · Cartera de seguros",
         "Estimación de la probabilidad de que las reclamaciones mensuales de 1,000 asegurados excedan $50,000.",
@@ -502,6 +571,13 @@ def exercise_4_page() -> None:
 
 
 def exercise_5_page() -> None:
+    """Expone el rechazo exponencial para generar normales estándar.
+
+    Además de la distribución final, la interfaz muestra intentos, aceptación y
+    contadores de operaciones. Esos datos hacen visible la optimización de
+    reciclaje descrita por el algoritmo, no solamente su resultado estadístico.
+    """
+
     section_intro(
         "Ejercicio 5 · Normal por rechazo exponencial",
         "Implementación literal del método del Ejemplo 5f usando exponenciales independientes de tasa 1.",
@@ -582,6 +658,13 @@ def exercise_5_page() -> None:
 
 
 def exercise_6_page() -> None:
+    """Genera una trayectoria de un proceso de Poisson homogéneo.
+
+    La tasa, el horizonte y la semilla alimentan la simulación por tiempos entre
+    llegadas. El gráfico escalonado representa N(t), mientras la tabla conserva
+    el uniforme, el interarribo y el instante candidato de cada iteración.
+    """
+
     section_intro(
         "Ejercicio 6 · Proceso de Poisson homogéneo",
         "Generación de todos los eventos ocurridos durante las primeras T unidades de tiempo con tasa lambda.",
@@ -628,6 +711,13 @@ def exercise_6_page() -> None:
 
 
 def _nhpp_event_figure(result: NHPPComparisonResult) -> go.Figure:
+    """Compara intensidad, cota global y eventos de ambos adelgazamientos.
+
+    Los eventos se colocan en niveles verticales distintos únicamente para que
+    puedan distinguirse; sus coordenadas horizontales siguen siendo los tiempos
+    simulados por los métodos global y mejorado.
+    """
+
     grid = np.linspace(0, result.horizon, 500)
     figure = go.Figure()
     figure.add_trace(go.Scatter(x=grid, y=nhpp_intensity(grid), name="lambda(t)", line=dict(color="#08783f", width=3)))
@@ -641,6 +731,13 @@ def _nhpp_event_figure(result: NHPPComparisonResult) -> go.Figure:
 
 
 def exercise_7_page() -> None:
+    """Desarrolla el Poisson no homogéneo y su mejora por cotas locales.
+
+    La sección teórica justifica la cota de adelgazamiento y calcula el número
+    esperado de eventos y propuestas. La sección numérica compara eficiencia,
+    eventos aceptados y registros completos usando flujos reproducibles.
+    """
+
     section_intro(
         "Ejercicio 7 · Poisson no homogéneo",
         "Adelgazamiento durante las primeras 10 unidades y mejora mediante cotas locales.",
@@ -714,6 +811,13 @@ def exercise_7_page() -> None:
 
 
 def exercise_8_page() -> None:
+    """Ejecuta el proceso de Poisson espacial con los parámetros del PDF.
+
+    El conteo aleatorio y cada coordenada polar quedan disponibles en la tabla.
+    La gráfica mantiene la geometría circular y permite verificar la distribución
+    uniforme de los puntos en área para intensidad uno y radio cinco.
+    """
+
     section_intro(
         "Ejercicio 8 · Proceso de Poisson bidimensional",
         "Generación y gráfica de los puntos de un proceso espacial dentro de un círculo.",
@@ -760,6 +864,13 @@ def exercise_8_page() -> None:
 
 
 def exercise_9_page() -> None:
+    """Explica, ejemplifica y valida el método polar de Marsaglia.
+
+    Las pestañas corresponden a los incisos teóricos del enunciado y a una
+    demostración programada. La simulación informa momentos muestrales, tasa de
+    aceptación, pares producidos e intentos rechazados para auditar el método.
+    """
+
     section_intro(
         "Ejercicio 9 · Método polar de Marsaglia",
         "Explicación, utilidad, ejemplo numérico y verificación programada del generador normal polar.",
@@ -849,6 +960,13 @@ def exercise_9_page() -> None:
 
 
 def exercise_10_page() -> None:
+    """Presenta la teoría espacial y construye el ejemplo numérico solicitado.
+
+    Se distinguen definición, aplicaciones y algoritmo. Al ejecutar el ejemplo,
+    la interfaz muestra el uniforme usado para invertir el conteo de Poisson y
+    las coordenadas polares y cartesianas obtenidas para cada punto.
+    """
+
     section_intro(
         "Ejercicio 10 · Proceso de Poisson bidimensional",
         "Definición formal, aplicaciones, algoritmo y ejemplo numérico para lambda=1 y R=2.",
@@ -926,6 +1044,13 @@ PAGE_FUNCTIONS = {
 
 
 def sidebar() -> str:
+    """Construye la navegación lateral y devuelve el ejercicio seleccionado.
+
+    La barra también documenta el papel de la semilla predeterminada y enlaza el
+    repositorio. Devolver la etiqueta permite resolver la página mediante
+    ``PAGE_FUNCTIONS`` sin una cadena extensa de condicionales.
+    """
+
     with st.sidebar:
         st.markdown("### Navegación")
         selected = st.selectbox("Ejercicio", NAVIGATION, label_visibility="collapsed")
@@ -941,6 +1066,13 @@ def sidebar() -> str:
 
 
 def main() -> None:
+    """Compone el encabezado institucional, la página activa y el pie común.
+
+    Este es el único punto de entrada de la interfaz. Las funciones de ejercicios
+    administran sus propios formularios y resultados, mientras ``main`` conserva
+    uniforme la estructura visual general de la aplicación.
+    """
+
     selected = sidebar()
     st.markdown(ACADEMIC_HEADER, unsafe_allow_html=True)
     PAGE_FUNCTIONS[selected]()

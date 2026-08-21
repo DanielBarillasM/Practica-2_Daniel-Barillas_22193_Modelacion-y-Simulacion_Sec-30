@@ -1,4 +1,10 @@
-"""Algoritmos para generar variables aleatorias continuas y procesos de Poisson."""
+"""API pública de generación continua y procesos de Poisson.
+
+Este módulo reexporta las operaciones que necesita la interfaz y oculta los
+auxiliares internos de validación, resumen y construcción de tablas. Mantener
+una lista ``__all__`` explícita documenta qué funciones forman parte del contrato
+estable del paquete.
+"""
 
 from .simulations import (
     SimulationError,
@@ -27,4 +33,3 @@ __all__ = [
     "simulate_spatial_poisson",
     "simulate_truncated_exponential",
 ]
-

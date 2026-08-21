@@ -32,6 +32,20 @@ OUTPUT = ROOT / "data" / "resultados_referencia.json"
 
 
 def build_results() -> dict:
+    """Ejecuta la corrida canónica y devuelve resultados serializables.
+
+    Todos los ejercicios usan la misma semilla inicial como convención de
+    reproducibilidad, pero cada función crea y consume su propia secuencia
+    pseudoaleatoria. Los tamaños y parámetros corresponden a los ejemplos que
+    se reportan en README e informes; por ello se centralizan en este script.
+
+    El diccionario contiene solamente escalares y listas compatibles con JSON.
+    Los DataFrames detallados permanecen en la aplicación, donde el usuario
+    puede inspeccionarlos o descargarlos sin inflar el archivo de referencia.
+    """
+
+    # Se calculan primero los objetos completos para que cada resumen se derive
+    # del mismo resultado que produciría la capa matemática de Streamlit.
     exercise_1 = simulate_truncated_exponential(SEED)
     exercise_4 = simulate_insurance_claims(SEED, 50_000)
     exercise_5 = generate_normal_exponential_rejection(SEED, 10_000)
@@ -97,6 +111,13 @@ def build_results() -> dict:
 
 
 def main() -> None:
+    """Crea la carpeta de datos y escribe el JSON de referencia en UTF-8.
+
+    La indentación vuelve auditable el archivo versionado y ``ensure_ascii=False``
+    conserva legibles los nombres en español. Esta función solo se ejecuta al
+    invocar el módulo como script, nunca durante una importación.
+    """
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(
         json.dumps(build_results(), ensure_ascii=False, indent=2) + "\n",

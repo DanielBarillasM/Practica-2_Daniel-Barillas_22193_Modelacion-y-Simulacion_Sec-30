@@ -42,7 +42,12 @@ GRAY = colors.HexColor("#5A675F")
 
 
 def register_fonts() -> tuple[str, str]:
-    """Usa Arial cuando está disponible para conservar acentos y símbolos."""
+    """Registra fuentes con soporte Unicode y devuelve sus nombres internos.
+
+    En Windows se prefiere Arial para conservar acentos y símbolos del informe.
+    Si los archivos no existen, las fuentes base de ReportLab mantienen el
+    script portable, aunque con un repertorio tipográfico más limitado.
+    """
 
     regular = Path("C:/Windows/Fonts/arial.ttf")
     bold = Path("C:/Windows/Fonts/arialbd.ttf")
@@ -57,6 +62,12 @@ FONT, FONT_BOLD = register_fonts()
 
 
 def header_footer(canvas, document) -> None:
+    """Dibuja identificación académica y paginación en cada página.
+
+    ``saveState`` y ``restoreState`` aíslan color y tipografía para que el pie no
+    modifique accidentalmente el estilo de los elementos del cuerpo.
+    """
+
     canvas.saveState()
     canvas.setFont(FONT, 8)
     canvas.setFillColor(GRAY)
@@ -66,6 +77,13 @@ def header_footer(canvas, document) -> None:
 
 
 def styles() -> dict[str, ParagraphStyle]:
+    """Crea el catálogo visual utilizado por todos los elementos del PDF.
+
+    Los estilos derivan de la hoja base de ReportLab y concentran tipografías,
+    jerarquías, colores, espaciado y alineación. Centralizarlos evita repetir
+    parámetros y mantiene consistente la identidad visual del documento.
+    """
+
     base = getSampleStyleSheet()
     return {
         "title": ParagraphStyle(
@@ -165,6 +183,15 @@ EXERCISES = [
 
 
 def build_pdf() -> None:
+    """Compone y escribe el informe PDF a partir de resultados reproducibles.
+
+    La lista ``story`` conserva el orden de portada, desarrollo, resultados y
+    conclusiones. ReportLab pagina ese flujo automáticamente; la tabla repite su
+    encabezado si ocupa más de una página y ``header_footer`` completa cada hoja.
+    """
+
+    # El PDF consume el mismo JSON que el DOCX y README, lo que evita publicar
+    # cifras contradictorias entre los distintos formatos de documentación.
     result = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
     style = styles()
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -258,4 +285,3 @@ def build_pdf() -> None:
 
 if __name__ == "__main__":
     build_pdf()
-

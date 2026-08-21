@@ -34,7 +34,12 @@ GRAY = RGBColor(90, 103, 95)
 
 
 def add_hyperlink(paragraph, text: str, url: str) -> None:
-    """Agrega un hipervínculo real porque python-docx no ofrece uno de alto nivel."""
+    """Agrega un hipervínculo real mediante los elementos XML de Word.
+
+    ``python-docx`` no expone una operación de alto nivel para enlaces externos.
+    Por eso se crea la relación, se asocia su identificador al elemento
+    ``w:hyperlink`` y se aplica color y subrayado al texto visible.
+    """
 
     relationship_id = paragraph.part.relate_to(
         url,
@@ -59,6 +64,12 @@ def add_hyperlink(paragraph, text: str, url: str) -> None:
 
 
 def set_cell_shading(cell, fill: str) -> None:
+    """Aplica a una celda el color de fondo hexadecimal indicado.
+
+    La modificación se realiza sobre ``w:tcPr`` porque el sombreado tampoco está
+    disponible como propiedad pública completa en ``python-docx``.
+    """
+
     properties = cell._tc.get_or_add_tcPr()
     shading = OxmlElement("w:shd")
     shading.set(qn("w:fill"), fill)
@@ -66,6 +77,12 @@ def set_cell_shading(cell, fill: str) -> None:
 
 
 def add_page_number(paragraph) -> None:
+    """Inserta en el pie el campo dinámico PAGE reconocido por Word.
+
+    No se escribe un número fijo: Word evalúa los marcadores de inicio,
+    instrucción y fin al abrir o actualizar el documento generado.
+    """
+
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = paragraph.add_run("Página ")
     field_begin = OxmlElement("w:fldChar")
@@ -79,6 +96,12 @@ def add_page_number(paragraph) -> None:
 
 
 def add_equation(document: Document, text: str) -> None:
+    """Añade una expresión matemática centrada con tipografía apropiada.
+
+    Las expresiones del informe son texto matemático legible, no imágenes. Esto
+    conserva la posibilidad de seleccionar, editar y buscar su contenido.
+    """
+
     paragraph = document.add_paragraph()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = paragraph.add_run(text)
@@ -88,6 +111,13 @@ def add_equation(document: Document, text: str) -> None:
 
 
 def add_result_table(document: Document, results: dict) -> None:
+    """Construye la tabla resumen a partir del JSON reproducible.
+
+    Cada fila contrasta una observación simulada con su referencia analítica o
+    esperanza. El encabezado y las filas alternas reciben estilos directos para
+    mantener una lectura clara aun cuando cambie el tema de Word.
+    """
+
     table = document.add_table(rows=1, cols=4)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.style = "Table Grid"
@@ -120,6 +150,16 @@ def add_result_table(document: Document, results: dict) -> None:
 
 
 def build_document() -> Document:
+    """Ensambla el informe académico completo y devuelve el documento DOCX.
+
+    El proceso carga una única fuente de resultados, define márgenes y estilos,
+    crea portada, teoría, desarrollo, tabla de resultados, auditoría y cierre.
+    Devolver el objeto separa la construcción de su persistencia en disco y
+    facilita reutilizar o probar el contenido desde otro módulo.
+    """
+
+    # La corrida de referencia se lee antes de crear párrafos para que todas las
+    # cifras incluidas en el informe provengan del mismo archivo reproducible.
     results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
     document = Document()
     section = document.sections[0]
@@ -359,6 +399,13 @@ def build_document() -> Document:
 
 
 def main() -> None:
+    """Genera el DOCX final en la ruta oficial del repositorio.
+
+    La carpeta se crea si aún no existe. Guardar se mantiene fuera de
+    ``build_document`` para que construir el objeto no produzca efectos laterales
+    cuando el módulo sea importado por herramientas o pruebas.
+    """
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     document = build_document()
     document.save(OUTPUT_PATH)

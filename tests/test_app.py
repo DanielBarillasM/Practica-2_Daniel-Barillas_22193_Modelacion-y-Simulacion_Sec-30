@@ -24,6 +24,14 @@ PAGES = [
 
 @pytest.mark.parametrize("page", PAGES)
 def test_every_page_renders_without_exception(page: str) -> None:
+    """Comprueba que cada página abre y presenta el enunciado correspondiente.
+
+    ``AppTest`` ejecuta Streamlit sin navegador. La parametrización recorre el
+    mismo catálogo que ve el usuario, selecciona cada opción y vuelve a ejecutar
+    la aplicación. Así se detectan fallos de importación, componentes incompatibles
+    o páginas que hayan perdido el encabezado requerido por las instrucciones.
+    """
+
     app = AppTest.from_file(str(APP), default_timeout=20).run()
     app.selectbox[0].select(page).run()
     assert not app.exception
