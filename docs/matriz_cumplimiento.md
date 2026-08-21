@@ -3,6 +3,17 @@
 Esta matriz relaciona cada requisito del PDF con su respuesta teórica, su
 implementación y la evidencia visible en Streamlit.
 
+## Documento usado como criterio
+
+La evaluación se hizo contra el PDF de la **Práctica 2 de CC2017**. No se
+proporcionó una rúbrica separada correspondiente a esta actividad. La rúbrica
+localizada en Descargas pertenece al curso Construcción de Compiladores y no es
+aplicable a generación de variables aleatorias continuas.
+
+Cada pantalla muestra ahora el enunciado correspondiente antes de la solución,
+lo cual permite comprobar directamente que teoría e implementación respondan al
+problema correcto.
+
 | Ejercicio | Requisito del PDF | Respuesta implementada | Evidencia |
 |---:|---|---|---|
 | 1 | Algoritmo eficiente, 1,000 variables, estimación y valor exacto | Transformación inversa de la exponencial truncada; media, IC y derivación exacta | Tabla de 1,000 valores, histograma y convergencia |
@@ -11,7 +22,7 @@ implementación y la evidencia visible en Streamlit.
 | 3(b) | Generar la CDF por tramos | Mezcla de exponencial de tasa 2 y uniforme `(0,1)` | CDF, histograma y muestras auditables |
 | 3(c) | Generar `Σ α_i x^i` | Selección de `i` con probabilidad `α_i`; transformación `U^(1/i)` | Pesos editables, CDF y tabla |
 | 4 | Estimar `P(S>50000)` | Cartera binomial compuesta con suma Gamma equivalente | Probabilidad, IC, referencia, histograma y convergencia |
-| 5 | Normal por rechazo exponencial del Ejemplo 5f | Dos exponenciales, criterio de aceptación y signo equiprobable | Intentos, aceptaciones, histograma, media y varianza |
+| 5 | Normal por rechazo exponencial del Ejemplo 5f | Rechazo con dos exponenciales, signo equiprobable y reciclaje del residual independiente | Intentos, eficiencia, histograma, media y varianza |
 | 6 | Primeras `T` unidades de un Poisson de tasa `λ` | Tiempos entre llegadas exponenciales acumulados hasta superar `T` | Trayectoria escalonada y tabla de llegadas |
 | 7(a) | Adelgazamiento en `[0,10]` para la intensidad indicada | Cota global `M=7` y aceptación `λ(t)/M` | Tabla completa de propuestas y eventos |
 | 7(b) | Proponer una mejora | Cotas decrecientes por intervalos unitarios | Comparación de propuestas y eficiencia |
@@ -28,6 +39,10 @@ implementación y la evidencia visible en Streamlit.
 - El código matemático no depende de Streamlit.
 - Los parámetros fijados por el PDF se conservan en las ejecuciones requeridas.
 - La semilla `22193` permite repetir la corrida documentada.
-- Las pruebas comprueban soporte, momentos, CDF, tasas de aceptación, conteos y
+- Las 26 pruebas comprueban soporte, momentos, CDF, tasas de aceptación, conteos y
   restricciones espaciales.
 - Las diez páginas de Streamlit se renderizan sin excepciones.
+- Cada página contiene el enunciado del ejercicio antes de su solución.
+- El extremo `U=0` de la inversión Poisson devuelve correctamente un conteo 0.
+- El Ejercicio 5 reproduce las 1.64 exponenciales y 1.32 evaluaciones cuadráticas
+  por normal indicadas aproximadamente en el material.

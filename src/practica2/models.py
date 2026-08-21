@@ -57,6 +57,8 @@ class NormalRejectionResult:
     variance: float
     acceptance_rate: float
     theoretical_acceptance: float
+    exponentials_generated: int
+    squares_computed: int
 
 
 @dataclass(frozen=True)
@@ -105,4 +107,3 @@ class PolarNormalResult:
     mean: float
     variance: float
     acceptance_rate: float
-

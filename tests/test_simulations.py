@@ -9,6 +9,7 @@ import pytest
 
 from src.practica2.simulations import (
     SimulationError,
+    _poisson_inverse,
     exact_aggregate_claim_probability,
     generate_normal_exponential_rejection,
     generate_normal_polar,
@@ -74,6 +75,15 @@ def test_normal_rejection_generates_standard_normal_and_expected_acceptance() ->
     assert result.variance == pytest.approx(1, abs=0.04)
     assert result.acceptance_rate == pytest.approx(result.theoretical_acceptance, abs=0.01)
     assert (result.attempts["Y2 exponencial"] >= 0).all()
+    expected_exponentials = 2 * math.sqrt(2 * math.e / math.pi) - 1
+    expected_squares = math.sqrt(2 * math.e / math.pi)
+    assert result.exponentials_generated / len(result.samples) == pytest.approx(
+        expected_exponentials, abs=0.03
+    )
+    assert result.squares_computed / len(result.samples) == pytest.approx(
+        expected_squares, abs=0.02
+    )
+    assert "Residual reciclada" in set(result.attempts["Origen de Y1"])
 
 
 def test_homogeneous_poisson_trace_is_ordered_and_stops_after_horizon() -> None:
@@ -108,6 +118,14 @@ def test_spatial_poisson_points_are_inside_circle() -> None:
     assert np.allclose(computed, result.points["Radio r"])
 
 
+def test_poisson_inverse_maps_zero_uniform_to_zero_count() -> None:
+    """Cubre la convención del extremo U=0 para una distribución discreta."""
+
+    assert _poisson_inverse(10.0, 0.0) == 0
+    with pytest.raises(SimulationError):
+        _poisson_inverse(10.0, 1.0)
+
+
 def test_spatial_poisson_counts_match_area_mean_over_repetitions() -> None:
     counts = [simulate_spatial_poisson(1.0, 2.0, seed).count for seed in range(1_000)]
     assert np.mean(counts) == pytest.approx(4 * math.pi, abs=0.5)
@@ -126,4 +144,3 @@ def test_polar_numerical_example_and_distribution() -> None:
 def test_polar_method_explicitly_rejects_outside_pair() -> None:
     with pytest.raises(SimulationError, match="rechaza"):
         polar_transform(0.99, 0.99)
-

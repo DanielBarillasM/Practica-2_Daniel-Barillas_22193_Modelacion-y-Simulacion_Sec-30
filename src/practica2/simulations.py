@@ -332,10 +332,12 @@ def generate_normal_exponential_rejection(
 ) -> NormalRejectionResult:
     """Genera normales estándar mediante el Ejemplo 5f del PDF.
 
-    En cada intento se generan ``Y1,Y2 ~ Exp(1)`` independientes y se acepta
-    ``Y1`` si ``Y2 > (Y1-1)^2/2``. Después se asigna un signo equiprobable.
-    La condición es equivalente al rechazo exponencial clásico y tiene tasa de
-    aceptación teórica ``sqrt(pi/(2e))``.
+    En cada intento se usan ``Y1,Y2 ~ Exp(1)`` independientes y se acepta
+    ``Y1`` si ``Y2 > (Y1-1)^2/2``. El residual
+    ``Y2-(Y1-1)^2/2`` de un intento aceptado es una exponencial independiente
+    del valor normal, por lo que se recicla como ``Y1`` para la siguiente
+    normal. Esta es la optimización descrita en el material: en régimen estable
+    requiere aproximadamente 1.64 exponenciales y 1.32 cuadrados por normal.
     """
 
     n = _validate_sample_size(sample_size, minimum=100, maximum=200_000)
@@ -343,33 +345,61 @@ def generate_normal_exponential_rejection(
     accepted_rows: list[dict[str, float | int]] = []
     attempt_rows: list[dict[str, float | int | str]] = []
     attempt = 0
+    exponentials_generated = 0
+    squares_computed = 0
+    recycled_y1: float | None = None
     while len(accepted_rows) < n:
-        attempt += 1
-        y1 = float(rng.exponential())
-        y2 = float(rng.exponential())
-        threshold = 0.5 * (y1 - 1.0) ** 2
-        accepted = y2 > threshold
-        attempt_rows.append(
-            {
-                "Intento": attempt,
-                "Y1 exponencial": y1,
-                "Y2 exponencial": y2,
-                "(Y1-1)^2/2": threshold,
-                "Decisión": "Aceptar" if accepted else "Rechazar",
-            }
-        )
-        if accepted:
-            u_sign = float(rng.random())
-            z = y1 if u_sign <= 0.5 else -y1
-            accepted_rows.append(
+        if recycled_y1 is None:
+            y1 = float(rng.exponential())
+            exponentials_generated += 1
+            y1_origin = "Generada"
+        else:
+            y1 = recycled_y1
+            recycled_y1 = None
+            y1_origin = "Residual reciclada"
+
+        while True:
+            attempt += 1
+            y2 = float(rng.exponential())
+            exponentials_generated += 1
+            threshold = 0.5 * (y1 - 1.0) ** 2
+            squares_computed += 1
+            accepted = y2 > threshold
+            residual = y2 - threshold if accepted else float("nan")
+            attempt_rows.append(
                 {
-                    "Normal generada": len(accepted_rows) + 1,
-                    "Intento de origen": attempt,
-                    "Valor absoluto": y1,
-                    "U para signo": u_sign,
-                    "Z": z,
+                    "Intento": attempt,
+                    "Origen de Y1": y1_origin,
+                    "Y1 exponencial": y1,
+                    "Y2 exponencial": y2,
+                    "(Y1-1)^2/2": threshold,
+                    "Residual exponencial": residual,
+                    "Decisión": "Aceptar" if accepted else "Rechazar",
                 }
             )
+            if accepted:
+                # El material demuestra que el residual es Exp(1) e
+                # independiente de Z. Se convierte en la Y1 de la próxima
+                # normal, evitando generar una exponencial adicional.
+                recycled_y1 = residual
+                u_sign = float(rng.random())
+                z = y1 if u_sign <= 0.5 else -y1
+                accepted_rows.append(
+                    {
+                        "Normal generada": len(accepted_rows) + 1,
+                        "Intento de origen": attempt,
+                        "Valor absoluto": y1,
+                        "U para signo": u_sign,
+                        "Z": z,
+                        "Residual reutilizable": residual,
+                    }
+                )
+                break
+
+            # Después de un rechazo se vuelve al Paso 1 y se genera otra Y1.
+            y1 = float(rng.exponential())
+            exponentials_generated += 1
+            y1_origin = "Generada tras rechazo"
     samples = pd.DataFrame(accepted_rows)
     attempts = pd.DataFrame(attempt_rows)
     values = samples["Z"].to_numpy(dtype=float)
@@ -380,6 +410,8 @@ def generate_normal_exponential_rejection(
         variance=float(np.var(values, ddof=1)),
         acceptance_rate=n / attempt,
         theoretical_acceptance=math.sqrt(math.pi / (2 * math.e)),
+        exponentials_generated=exponentials_generated,
+        squares_computed=squares_computed,
     )
 
 
@@ -644,6 +676,13 @@ def simulate_nhpp_comparison(seed: int, horizon: float = 10.0) -> NHPPComparison
 def _poisson_inverse(mean: float, uniform: float) -> int:
     """Genera Poisson por inversión y conserva el uniforme para la auditoría."""
 
+    if not 0 <= uniform < 1:
+        raise SimulationError("El uniforme para invertir Poisson debe pertenecer a [0,1).")
+    # SciPy adopta la convención ppf(0)=-1 para algunas distribuciones
+    # discretas. En la inversión usada aquí, U=0 corresponde correctamente a
+    # N=0 porque ya satisface U <= F(0).
+    if uniform == 0:
+        return 0
     # ``ppf`` implementa la inversión de manera estable incluso cuando
     # exp(-mean) subdesborda para regiones con una cantidad esperada grande.
     count = poisson.ppf(uniform, mean)

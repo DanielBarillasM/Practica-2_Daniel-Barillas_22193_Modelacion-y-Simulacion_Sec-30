@@ -59,6 +59,8 @@ def build_results() -> dict:
             "media": exercise_5.mean,
             "varianza": exercise_5.variance,
             "aceptacion": exercise_5.acceptance_rate,
+            "exponenciales_por_normal": exercise_5.exponentials_generated / 10_000,
+            "cuadrados_por_normal": exercise_5.squares_computed / 10_000,
         },
         "ejercicio_6": {
             "lambda": 2.0,
@@ -105,4 +107,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

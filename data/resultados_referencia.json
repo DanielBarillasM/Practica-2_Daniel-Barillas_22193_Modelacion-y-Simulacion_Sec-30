@@ -20,9 +20,11 @@
   },
   "ejercicio_5": {
     "normales": 10000,
-    "media": 0.005952366836504438,
-    "varianza": 0.9921416408141686,
-    "aceptacion": 0.7642338555598013
+    "media": 0.008421235259575954,
+    "varianza": 1.0064215123137763,
+    "aceptacion": 0.7622532205198567,
+    "exponenciales_por_normal": 1.6239,
+    "cuadrados_por_normal": 1.3119
   },
   "ejercicio_6": {
     "lambda": 2.0,

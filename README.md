@@ -22,6 +22,7 @@ y permite descargar las tablas completas en CSV.
 
 - [Aplicación Streamlit](app/app.py)
 - [Informe académico en Word](docs/informe/Informe_Practica_2_Daniel_Barillas_22193.docx)
+- [Informe académico en PDF](docs/informe/Informe_Practica_2_Daniel_Barillas_22193.pdf)
 - [PDF de instrucciones](docs/instrucciones/Practica_2_Generacion_de_Variables_Aleatorias_Continuas.pdf)
 - [Matriz de cumplimiento](docs/matriz_cumplimiento.md)
 - [Pruebas automatizadas](tests/)
@@ -42,6 +43,7 @@ y permite descargar las tablas completas en CSV.
 ## Características
 
 - Diez secciones que corresponden uno a uno con el PDF.
+- Enunciado del PDF incluido al inicio de cada ejercicio.
 - Respuestas teóricas visibles antes de ejecutar las simulaciones.
 - Fórmulas renderizadas con LaTeX dentro de Streamlit.
 - Generador PCG64 con semilla editable y valor inicial `22193`.
@@ -50,7 +52,8 @@ y permite descargar las tablas completas en CSV.
 - Comparaciones entre resultados simulados y referencias matemáticas.
 - Descarga de resultados en CSV codificado en UTF-8.
 - Código numérico separado de la interfaz y cubierto por pruebas automáticas.
-- Informe académico en formato Word dentro de `docs/informe/`.
+- Informe académico en formatos Word y PDF dentro de `docs/informe/`.
+- Suite actual de 26 pruebas matemáticas y de interfaz aprobadas.
 
 ## Resultados reproducibles
 
@@ -62,7 +65,7 @@ debe mantener el mismo comportamiento probabilístico.
 |---:|---|---:|---:|
 | 1 | 1,000 observaciones | Media `0.02490814` | `0.02479168` |
 | 4 | 50,000 meses | Probabilidad `10.6820 %` | `10.7098 %` |
-| 5 | 10,000 normales | Media `0.005952`; varianza `0.992142` | Media 0; varianza 1 |
+| 5 | 10,000 normales | Media `0.008421`; varianza `1.006422` | Media 0; varianza 1 |
 | 6 | λ=2, T=10 | 27 eventos | 20 esperados |
 | 7 | T=10 | 25 eventos global; 38 mejorado | `39.5916` esperados |
 | 8 | λ=1, R=5 | 73 puntos | `78.5398` esperados |
@@ -139,6 +142,18 @@ Y_2>\frac{(Y_1-1)^2}{2}.
 
 Después se asigna signo con probabilidad `1/2`. La tasa de aceptación teórica
 es `sqrt(π/(2e))`, aproximadamente `0.76017`.
+
+La versión implementada conserva el residual exponencial independiente de una
+aceptación y lo utiliza como `Y1` de la normal siguiente. Esto reproduce la
+optimización explicada en el material:
+
+```math
+E[\text{exponenciales por normal}]
+=2\sqrt{\frac{2e}{\pi}}-1\approx1.631,
+\qquad
+E[\text{cuadrados por normal}]
+=\sqrt{\frac{2e}{\pi}}\approx1.315.
+```
 
 ### 6. Proceso de Poisson homogéneo
 
@@ -265,6 +280,12 @@ Después se construye el documento:
 python scripts\generar_informe.py
 ```
 
+La versión PDF se genera sin depender de Microsoft Word:
+
+```powershell
+python scripts\generar_informe_pdf.py
+```
+
 El documento se crea en:
 
 ```text
@@ -287,6 +308,7 @@ docs/informe/Informe_Practica_2_Daniel_Barillas_22193.docx
 │   └── matriz_cumplimiento.md          # Auditoría contra el PDF
 ├── scripts/
 │   ├── generar_informe.py             # Generador del DOCX
+│   ├── generar_informe_pdf.py         # Generador directo del PDF
 │   └── generar_resultados.py           # Corrida reproducible
 ├── src/
 │   └── practica2/
@@ -318,6 +340,23 @@ nueva trayectoria válida y mantenerla reproduce exactamente las mismas tablas.
   simulación solicitada.
 - Los parámetros fijados explícitamente por el PDF aparecen identificados en la
   interfaz.
+
+## Auditoría contra instrucciones y rúbrica
+
+La verificación se realizó inciso por inciso contra el PDF **Práctica 2 —
+Generación de Variables Aleatorias Continuas**, que es el documento aplicable a
+CC2017. No se encontró en los archivos proporcionados una rúbrica separada para
+esta práctica. El archivo denominado `Laboratorio 01 - Rúbrica de evaluación.pdf`
+corresponde a **Construcción de Compiladores**, por lo que no se utilizó para
+calificar este trabajo.
+
+La [matriz de cumplimiento](docs/matriz_cumplimiento.md) documenta la relación
+entre cada requisito, su respuesta teórica, su implementación y la evidencia de
+la interfaz. La auditoría también produjo dos correcciones preventivas:
+
+- reciclaje de la exponencial residual en el Ejercicio 5 para alcanzar la
+  eficiencia indicada por el material;
+- manejo explícito de `U=0` en la inversión del conteo Poisson espacial.
 
 ---
 

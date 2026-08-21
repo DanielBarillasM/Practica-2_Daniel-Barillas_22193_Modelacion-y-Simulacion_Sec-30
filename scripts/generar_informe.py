@@ -248,9 +248,9 @@ def build_document() -> Document:
         ),
         (
             "4.5 Ejercicio 5 — Normal por rechazo exponencial",
-            "Se implementa literalmente el Ejemplo 5f con dos exponenciales independientes y signo equiprobable.",
+            "Se implementa el Ejemplo 5f con dos exponenciales, signo equiprobable y reciclaje del residual exponencial independiente.",
             "Aceptar si Y2 > (Y1-1)^2/2",
-            "La aceptación teórica es sqrt(π/(2e)) ≈ 0.76017.",
+            "La aceptación teórica es sqrt(π/(2e)) ≈ 0.76017; la eficiencia esperada es 1.64 exponenciales y 1.32 cuadrados por normal.",
         ),
         (
             "4.6 Ejercicio 6 — Poisson homogéneo",
@@ -283,9 +283,24 @@ def build_document() -> Document:
             "Se incluye un ejemplo numérico completo para λ=1 y R=2.",
         ),
     ]
+    statements = [
+        "Sea X exponencial con media 1. Genere eficientemente 1,000 valores condicionados a X<0.05, estime su media y determine el valor exacto.",
+        "Explique cómo generar una variable cuya CDF es F(x)=Σ p_i F_i(x), con pesos no negativos que suman 1.",
+        "Usando composición, proporcione algoritmos para las distribuciones de los incisos (a), (b) y (c) indicadas en el PDF.",
+        "Con 1,000 asegurados, probabilidad de reclamación 0.05 y montos exponenciales de media $800, estime P(S>$50,000).",
+        "Genere variables normales con el rechazo exponencial de tasa 1 presentado en el Ejemplo 5f.",
+        "Genere las primeras T unidades de tiempo de un proceso de Poisson homogéneo con tasa λ.",
+        "Genere por adelgazamiento el proceso con λ(t)=3+4/(t+1) en [0,10] y proponga una mejora.",
+        "Genere y grafique un proceso de Poisson bidimensional en un círculo para λ=1 y R=5.",
+        "Explique el método polar, su utilidad frente a Box–Muller y desarrolle un ejemplo numérico completo.",
+        "Defina el proceso de Poisson bidimensional, explique sus aplicaciones y desarrolle un ejemplo para λ=1 y R=2.",
+    ]
     document.add_heading("4. Desarrollo de los ejercicios", level=1)
-    for title_text, explanation, equation, result_text in exercises:
+    for statement, (title_text, explanation, equation, result_text) in zip(statements, exercises):
         document.add_heading(title_text, level=2)
+        statement_paragraph = document.add_paragraph()
+        statement_paragraph.add_run("Enunciado: ").bold = True
+        statement_paragraph.add_run(statement)
         document.add_paragraph(explanation)
         add_equation(document, equation)
         document.add_paragraph(result_text)
@@ -315,7 +330,20 @@ def build_document() -> Document:
     document.add_paragraph("Ejecutar pruebas:")
     add_equation(document, "python -m pytest -q")
 
-    document.add_heading("8. Conclusiones", level=1)
+    document.add_heading("8. Auditoría contra las instrucciones", level=1)
+    document.add_paragraph(
+        "La revisión se realizó contra los diez ejercicios y todos sus incisos del PDF de la "
+        "Práctica 2 de CC2017. No se encontró una rúbrica separada aplicable a esta actividad. "
+        "La rúbrica localizada en Descargas corresponde a Construcción de Compiladores y, por "
+        "tratarse de otro curso, no se utilizó."
+    )
+    document.add_paragraph(
+        "Como resultado de la auditoría se incorporó el enunciado en cada pantalla, se optimizó "
+        "el Ejercicio 5 reciclando la exponencial residual independiente y se cubrió el extremo "
+        "U=0 en la inversión del conteo Poisson espacial."
+    )
+
+    document.add_heading("9. Conclusiones", level=1)
     for conclusion in [
         "La transformación inversa evita el rechazo ineficiente en la exponencial truncada.",
         "El método de composición convierte mezclas de CDF en algoritmos simples y verificables.",
@@ -339,4 +367,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

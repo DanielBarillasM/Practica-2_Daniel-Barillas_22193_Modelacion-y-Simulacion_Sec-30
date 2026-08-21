@@ -131,6 +131,13 @@ def section_intro(title: str, description: str) -> None:
     )
 
 
+def exercise_statement(text: str) -> None:
+    """Presenta el enunciado del PDF antes de desarrollar la solución."""
+
+    st.subheader("Enunciado del ejercicio")
+    st.info(text)
+
+
 def theory_card(text: str) -> None:
     st.markdown(f'<div class="theory-card">{text}</div>', unsafe_allow_html=True)
 
@@ -197,6 +204,13 @@ def exercise_1_page() -> None:
     section_intro(
         "Ejercicio 1 · Exponencial condicionada",
         "Generación eficiente de 1,000 valores de una exponencial de media 1 condicionada a X < 0.05.",
+    )
+    exercise_statement(
+        r"Sea $X$ una variable aleatoria exponencial con media 1. Proporcione un algoritmo eficiente "
+        r"para simular una variable aleatoria cuya distribución es la distribución condicional de $X$ "
+        r"dado que $X<0.05$, con densidad $f(x)=e^{-x}/(1-e^{-0.05})$ para $0<x<0.05$. "
+        r"Genere 1,000 de estas variables y utilícelas para estimar $E[X\mid X<0.05]$. "
+        r"Luego determine el valor exacto de $E[X\mid X<0.05]$."
     )
     theory_card(
         "<strong>Idea central.</strong> Rechazar exponenciales mayores que 0.05 desperdiciaría "
@@ -274,6 +288,12 @@ def exercise_2_page() -> None:
         "Ejercicio 2 · Método de composición",
         "Respuesta teórica y demostración programada para generar una distribución que es mezcla de varias CDF.",
     )
+    exercise_statement(
+        r"Suponga que es relativamente fácil generar variables aleatorias a partir de cualquiera de "
+        r"las distribuciones $F_i$, $i=1,\ldots,n$. ¿Cómo podríamos generar una variable aleatoria con "
+        r"función de distribución $F(x)=\sum_{i=1}^{n}p_iF_i(x)$, donde los $p_i$ son números no "
+        r"negativos cuya suma es 1?"
+    )
     st.subheader("Respuesta teórica")
     st.markdown(
         "Se introduce una variable discreta auxiliar $I$. Primero se selecciona la distribución "
@@ -343,6 +363,15 @@ def exercise_3_page() -> None:
         "Ejercicio 3 · Distribuciones por composición",
         "Algoritmos para los tres incisos obtenidos directamente a partir del método del ejercicio 2.",
     )
+    exercise_statement(
+        r"Utilizando el resultado del Ejercicio 2, proporcione algoritmos para generar variables "
+        r"aleatorias a partir de las siguientes distribuciones: "
+        r"(a) $F(x)=(x+x^3+x^5)/3$, $0\le x\le1$; "
+        r"(b) $F(x)=(1-e^{-2x}+2x)/3$ para $0<x<1$ y "
+        r"$F(x)=(3-e^{-2x})/3$ para $1<x<\infty$; "
+        r"(c) $F(x)=\sum_{i=1}^{n}\alpha_i x^i$, $0\le x\le1$, donde "
+        r"$\alpha_i\ge0$ y $\sum_{i=1}^{n}\alpha_i=1$."
+    )
     case = st.radio(
         "Selecciona el inciso",
         ["a", "b", "c"],
@@ -410,6 +439,13 @@ def exercise_4_page() -> None:
         "Ejercicio 4 · Cartera de seguros",
         "Estimación de la probabilidad de que las reclamaciones mensuales de 1,000 asegurados excedan $50,000.",
     )
+    exercise_statement(
+        "Una compañía de seguros contra siniestros tiene 1,000 asegurados, cada uno de los cuales "
+        "presentará una reclamación en el próximo mes de manera independiente con probabilidad 0.05. "
+        "Suponiendo que los montos de las reclamaciones son variables aleatorias exponenciales "
+        "independientes con media \\$800, utilice simulación para estimar la probabilidad de que la "
+        "suma de estas reclamaciones exceda \\$50,000."
+    )
     st.latex(r"N\sim\mathrm{Binomial}(1000,0.05),\qquad Y_i\sim\mathrm{Exp}(1/800)")
     st.latex(r"S=\sum_{i=1}^{N}Y_i,\qquad P(S>50{,}000)")
     with st.expander("Fundamento y referencia matemática", expanded=True):
@@ -470,16 +506,29 @@ def exercise_5_page() -> None:
         "Ejercicio 5 · Normal por rechazo exponencial",
         "Implementación literal del método del Ejemplo 5f usando exponenciales independientes de tasa 1.",
     )
+    exercise_statement(
+        "Escriba un programa que genere variables aleatorias normales utilizando el método del "
+        "Ejemplo 5f: método de rechazo con una distribución exponencial de tasa 1."
+    )
     st.markdown("Para generar el valor absoluto de una normal estándar se usa una exponencial como densidad auxiliar.")
     st.latex(r"Y_1,Y_2\sim\mathrm{Exp}(1)")
     st.latex(r"\text{Aceptar }Y_1\quad\Longleftrightarrow\quad Y_2>\frac{(Y_1-1)^2}{2}")
     st.markdown("Una vez aceptado, un uniforme adicional asigna signo positivo o negativo con igual probabilidad.")
     st.latex(r"P(\mathrm{aceptar})=\sqrt{\frac{\pi}{2e}}\approx0.76017")
+    st.markdown(
+        "El residual aceptado es una exponencial independiente y se reutiliza como $Y_1$ de la "
+        "siguiente normal, tal como indica el material de apoyo."
+    )
+    st.latex(
+        r"E[\text{exponenciales por normal}]=2\sqrt{\frac{2e}{\pi}}-1\approx1.631,"
+        r"\qquad E[\text{cuadrados por normal}]=\sqrt{\frac{2e}{\pi}}\approx1.315"
+    )
     with st.expander("Pseudocódigo", expanded=False):
         st.code(
             "Repetir:\n"
             "    generar Y1, Y2 exponenciales de tasa 1\n"
             "    si Y2 > (Y1-1)^2/2:\n"
+            "        guardar Y2-(Y1-1)^2/2 como Y1 de la próxima normal\n"
             "        generar U\n"
             "        devolver Y1 si U <= 1/2; en otro caso devolver -Y1",
             language="text",
@@ -500,6 +549,17 @@ def exercise_5_page() -> None:
     cols[2].metric("Aceptación empírica", f"{result.acceptance_rate:.2%}")
     cols[3].metric("Aceptación teórica", f"{result.theoretical_acceptance:.2%}")
     cols[4].metric("Intentos", f"{len(result.attempts):,}")
+    efficiency_cols = st.columns(2)
+    efficiency_cols[0].metric(
+        "Exponenciales por normal",
+        format_number(result.exponentials_generated / len(result.samples), 4),
+        help="Referencia asintótica aproximada: 1.631.",
+    )
+    efficiency_cols[1].metric(
+        "Cuadrados por normal",
+        format_number(result.squares_computed / len(result.samples), 4),
+        help="Referencia asintótica aproximada: 1.315.",
+    )
     dist_tab, sample_tab, attempts_tab = st.tabs(["Comparación normal", "Valores aceptados", "Todos los intentos"])
     with dist_tab:
         st.plotly_chart(
@@ -525,6 +585,10 @@ def exercise_6_page() -> None:
     section_intro(
         "Ejercicio 6 · Proceso de Poisson homogéneo",
         "Generación de todos los eventos ocurridos durante las primeras T unidades de tiempo con tasa lambda.",
+    )
+    exercise_statement(
+        r"Escriba un programa que genere las primeras $T$ unidades de tiempo de un proceso de "
+        r"Poisson con tasa $\lambda$."
     )
     st.markdown("Los tiempos entre llegadas son exponenciales independientes y sus sumas producen los tiempos de evento.")
     st.latex(r"E_i\sim\mathrm{Exp}(\lambda),\qquad S_n=\sum_{i=1}^{n}E_i")
@@ -580,6 +644,12 @@ def exercise_7_page() -> None:
     section_intro(
         "Ejercicio 7 · Poisson no homogéneo",
         "Adelgazamiento durante las primeras 10 unidades y mejora mediante cotas locales.",
+    )
+    exercise_statement(
+        r"(a) Escriba un programa que utilice el algoritmo de adelgazamiento (thinning) para generar "
+        r"las primeras 10 unidades de tiempo de un proceso de Poisson no homogéneo con función de "
+        r"intensidad $\lambda(t)=3+4/(t+1)$. "
+        r"(b) Proponga una manera de mejorar el algoritmo de adelgazamiento para este ejemplo."
     )
     st.latex(r"\lambda(t)=3+\frac{4}{t+1},\qquad 0\le t\le10")
     theory_tab, simulation_tab = st.tabs(["Incisos (a) y (b)", "Comparación por simulación"])
@@ -648,6 +718,11 @@ def exercise_8_page() -> None:
         "Ejercicio 8 · Proceso de Poisson bidimensional",
         "Generación y gráfica de los puntos de un proceso espacial dentro de un círculo.",
     )
+    exercise_statement(
+        r"Escriba un programa para generar los puntos de un proceso de Poisson bidimensional dentro "
+        r"de un círculo de radio $R$, y ejecute el programa para $\lambda=1$ y $R=5$. "
+        r"Grafique los puntos obtenidos."
+    )
     st.markdown(r"El enunciado requiere ejecutar el algoritmo con $\lambda=1$ y $R=5$.")
     st.latex(r"N\sim\mathrm{Poisson}(\lambda\pi R^2)")
     st.latex(r"r=R\sqrt{U_1},\qquad\theta=2\pi U_2,\qquad(x,y)=(r\cos\theta,r\sin\theta)")
@@ -689,6 +764,14 @@ def exercise_9_page() -> None:
         "Ejercicio 9 · Método polar de Marsaglia",
         "Explicación, utilidad, ejemplo numérico y verificación programada del generador normal polar.",
     )
+    exercise_statement(
+        r"Explique el método polar para generar variables aleatorias normales. Su explicación debe "
+        r"incluir: (a) en qué consiste el método, con idea general y algoritmo paso a paso; "
+        r"(b) para qué sirve, qué problema resuelve y por qué es preferible frente al uso directo de "
+        r"las transformaciones de Box–Muller; y (c) un ejemplo numérico en el que se elijan $U_1$ y "
+        r"$U_2$ y se aplique el algoritmo hasta obtener el par de normales $X,Y$, seleccionando otro "
+        r"par si el primero cae fuera del círculo unitario."
+    )
     a_tab, b_tab, c_tab, simulation_tab = st.tabs(["(a) Método", "(b) Utilidad", "(c) Ejemplo", "Demostración"])
     with a_tab:
         st.markdown(
@@ -710,7 +793,8 @@ def exercise_9_page() -> None:
         st.markdown(
             "Sirve para generar pares de variables normales estándar independientes. Frente a la "
             "transformación directa de Box–Muller evita evaluar seno y coseno, operaciones que históricamente "
-            "son más costosas. A cambio, rechaza los puntos que caen fuera del círculo."
+            "son más costosas. A cambio, rechaza los puntos que caen fuera del círculo. En hardware moderno "
+            "la ventaja exacta depende de la implementación, pero esta es la razón algorítmica clásica."
         )
         st.latex(r"P(\mathrm{aceptar})=\frac{\text{área del círculo}}{\text{área del cuadrado}}=\frac{\pi}{4}\approx0.7854")
     with c_tab:
@@ -768,6 +852,13 @@ def exercise_10_page() -> None:
     section_intro(
         "Ejercicio 10 · Proceso de Poisson bidimensional",
         "Definición formal, aplicaciones, algoritmo y ejemplo numérico para lambda=1 y R=2.",
+    )
+    exercise_statement(
+        r"Explique el proceso de Poisson bidimensional y el algoritmo para simularlo dentro de una "
+        r"región circular. Incluya: (a) definición formal y algoritmo paso a paso; "
+        r"(b) para qué sirve, qué fenómenos modela y por qué es útil simularlo; y "
+        r"(c) un ejemplo numérico para $\lambda=1$ y $R=2$, eligiendo los números aleatorios "
+        r"necesarios y aplicando el algoritmo hasta obtener las coordenadas polares de los puntos."
     )
     a_tab, b_tab, c_tab = st.tabs(["(a) Definición y algoritmo", "(b) Aplicaciones", "(c) Ejemplo numérico"])
     with a_tab:

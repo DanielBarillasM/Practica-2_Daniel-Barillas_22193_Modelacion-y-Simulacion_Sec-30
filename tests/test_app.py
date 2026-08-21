@@ -27,4 +27,4 @@ def test_every_page_renders_without_exception(page: str) -> None:
     app = AppTest.from_file(str(APP), default_timeout=20).run()
     app.selectbox[0].select(page).run()
     assert not app.exception
-
+    assert any("Enunciado del ejercicio" == item.value for item in app.subheader)
