@@ -1,0 +1,10 @@
+streamlit>=1.50,<2.0
+numpy>=1.26,<3.0
+pandas>=2.1,<3.0
+plotly>=5.22,<7.0
+scipy>=1.12,<2.0
+python-docx>=1.1,<2.0
+
+# Dependencia utilizada únicamente por la suite de validación.
+pytest>=8.0,<10.0
+

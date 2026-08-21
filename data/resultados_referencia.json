@@ -1,0 +1,58 @@
+{
+  "semilla": 22193,
+  "ejercicio_1": {
+    "muestras": 1000,
+    "media_estimada": 0.024908136436577303,
+    "media_exacta": 0.024791675346705788,
+    "ic_95": [
+      0.024022475196490978,
+      0.025793797676663628
+    ]
+  },
+  "ejercicio_4": {
+    "replicas": 50000,
+    "probabilidad_estimada": 0.10682,
+    "probabilidad_referencia": 0.10709770132247984,
+    "ic_95": [
+      0.10411253274037195,
+      0.10952746725962804
+    ]
+  },
+  "ejercicio_5": {
+    "normales": 10000,
+    "media": 0.005952366836504438,
+    "varianza": 0.9921416408141686,
+    "aceptacion": 0.7642338555598013
+  },
+  "ejercicio_6": {
+    "lambda": 2.0,
+    "T": 10.0,
+    "eventos_observados": 27,
+    "eventos_esperados": 20.0
+  },
+  "ejercicio_7": {
+    "eventos_esperados": 39.59158109119348,
+    "global_eventos": 25,
+    "global_propuestas": 72,
+    "mejorado_eventos": 38,
+    "mejorado_propuestas": 41
+  },
+  "ejercicio_8": {
+    "lambda": 1.0,
+    "R": 5.0,
+    "puntos_observados": 73,
+    "puntos_esperados": 78.53981633974483
+  },
+  "ejercicio_9": {
+    "normales": 10000,
+    "media": 0.01345786534998893,
+    "varianza": 1.0163334926390302,
+    "aceptacion": 0.7859163784973279
+  },
+  "ejercicio_10": {
+    "lambda": 1.0,
+    "R": 2.0,
+    "puntos_observados": 10,
+    "puntos_esperados": 12.566370614359172
+  }
+}
